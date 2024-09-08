@@ -109,7 +109,7 @@ for table_name, table_content in list_tables:
 #     create_Script.write(sql_create_db_temp)
 
 with open("Crawl-Vocabulary.sql", "a", encoding="utf-8") as crawl_vocabulary_script:
-    crawl_vocabulary_script.write(f"USE [VOCABULARY_TEPM_DB];\n")
+    crawl_vocabulary_script.write(f"USE [TEMP_DB];\n")
     crawl_vocabulary_script.write(f"GO\n")
     
     for vocabulary_topic in list_vocabulary_topic:
@@ -123,5 +123,4 @@ with open("Crawl-Vocabulary.sql", "a", encoding="utf-8") as crawl_vocabulary_scr
             crawl_vocabulary_script.write(f"SELECT idVocTopic, 'DF2B3FC0-0A65-416F-AFF9-073E53FFCAAC', N'{vocabulary.engWord}', N'{vocabulary.wordType}', N'{vocabulary.meaning}', N'{vocabulary.pronunciation}'\n")
             crawl_vocabulary_script.write(f"FROM VocabularyTopics\n")
             crawl_vocabulary_script.write(f"WHERE VocabularyTopics.name = N'{vocabulary_topic.topic_name}'\n")
-
         crawl_vocabulary_script.write("COMMIT;\n\n\n")
