@@ -3,13 +3,13 @@ import requests
 import json
 import re
 
-class PMPModel():
+class VocabularyModel():
     def __init__(self): pass
 
     def __str__(self):    
         return json.dumps(self, ensure_ascii=False, indent=4, default=vars)
 
-class VocabularyTopic(PMPModel):
+class VocabularyTopic(VocabularyModel):
 
     def __init__(self, header_soup, content_soup):
 
@@ -34,7 +34,7 @@ class VocabularyTopic(PMPModel):
 
 
 
-class Vocabulary(PMPModel):
+class Vocabulary(VocabularyModel):
 
     def __init__(self, soup):
         elements = soup.find_all('td')
@@ -80,33 +80,6 @@ list_tables = split_pmp_table_content(soup)
 for table_name, table_content in list_tables:
     vocabulary_topic = VocabularyTopic(table_name, table_content)
     list_vocabulary_topic.append(vocabulary_topic)
-
-# sql_create_db_temp = """
-# CREATE DATABASE VOCABULARY_TEMP_DB;
-# GO
-
-# USE VOCABULARY_TEMP_DB
-# GO
-
-# CREATE TABLE [dbo].[VocabularyTopics](
-# 	[idVocTopic] [uniqueidentifier] NOT NULL DEFAULT NEWID(),
-# 	[idProfessor] [uniqueidentifier] NOT NULL,
-# 	[name] [nvarchar](max) NOT NULL
-# ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-# GO
-
-# CREATE TABLE [dbo].[Vocabularies](
-# 	[idVoc] [uniqueidentifier] NOT NULL DEFAULT NEWID(),
-# 	[idTopic] [uniqueidentifier] NOT NULL,
-# 	[idProfessor] [uniqueidentifier] NOT NULL,
-# 	[engWord] [nvarchar](max) NOT NULL,
-# 	[wordType] [nvarchar](max) NOT NULL,
-# 	[meaning] [nvarchar](max) NOT NULL,
-# 	[pronunciation] [nvarchar](max)
-# ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-# GO"""
-# with open("CREATE VOCABULARY_TEMP_DB.sql", "a", encoding="utf-8") as create_Script:
-#     create_Script.write(sql_create_db_temp)
 
 with open("Crawl-Vocabulary.sql", "a", encoding="utf-8") as crawl_vocabulary_script:
     crawl_vocabulary_script.write(f"USE [TEMP_DB];\n")

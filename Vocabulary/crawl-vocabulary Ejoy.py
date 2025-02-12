@@ -2,8 +2,13 @@ from bs4 import BeautifulSoup as bs
 import requests
 import json
 import re
+import uuid
 
-class PMPModel():
+DB_TYPE = "sqlserver"
+FILE_NAME = "Crawl-Vocabulary-Ejoy.sql"
+# FILE_NAME = "Crawl-Vocabulary-Ejoy-MySQL.sql"
+
+class EjoyModel():
     def __init__(self): pass
 
     def __str__(self):    
@@ -30,7 +35,7 @@ def extract_topic_title(input_str):
     print(topic_title)
     return topic_title
 
-class VocabularyTopic(PMPModel):
+class VocabularyTopic(EjoyModel):
 
     def __init__(self, topic_soup, header_soup, content_soup):
         parse_title = extract_topic_title(header_soup.text.strip())
@@ -45,7 +50,7 @@ class VocabularyTopic(PMPModel):
                 if vocabulary.__dict__:
                     self.vocabularies.append(vocabulary)
 
-class Vocabulary(PMPModel):
+class Vocabulary(EjoyModel):
 
     def __init__(self, topic, soup):
         elements = soup.find_all('li')
@@ -76,6 +81,9 @@ class Vocabulary(PMPModel):
             return []
  
 # Hàm helper
+def generate_uuid():
+    return str(uuid.uuid4())
+
 def split_pmp_table_content(soup) -> list[tuple[any, any]]:
     entry_content = soup.find('div', attrs={'id': 'single-entry-content'})
 
@@ -119,22 +127,27 @@ for topic_title, table_name, table_content in list_tables:
         vocabulary_topic = VocabularyTopic(topic_title, table_name, table_content)
         if vocabulary_topic is not None:
             list_vocabulary_topic.append(vocabulary_topic)
+        
+with open(FILE_NAME, "w", encoding="utf-8") as sql_file:
+    sql_file.write("USE toeic_web_db;\n")
 
-with open("Crawl-Vocabulary-Ejoy.sql", "a", encoding="utf-8") as crawl_vocabulary_script:
-    crawl_vocabulary_script.write(f"USE [TEMP_DB];\n")
-    crawl_vocabulary_script.write(f"GO\n")
-    
     for vocabulary_topic in list_vocabulary_topic:
         print(vocabulary_topic)
+        topic_uuid = generate_uuid()
 
-        crawl_vocabulary_script.write(f"BEGIN TRANSACTION;\n")
-        crawl_vocabulary_script.write(f"INSERT INTO VocList (idUser, title, description, author, quantity, createDate, status, isPublic) VALUES\n")
-        crawl_vocabulary_script.write(f"('DF2B3FC0-0A65-416F-AFF9-073E53FFCAAC', N'{vocabulary_topic.topic_name}', N'{vocabulary_topic.topic_name}', 'pro1', {len(vocabulary_topic.vocabularies)}, '2024-06-07 16:22:07.8087296', {0}, {1})\n")
-        crawl_vocabulary_script.write(f"GO\n\n")
+        sql_file.write(f"START TRANSACTION;\n")
+        sql_file.write(f"INSERT INTO VocList (idVocList, idUser, title, description, author, quantity, createDate, status, isPublic)\n")
+        if DB_TYPE == "sqlserver":
+            sql_file.write(f"VALUES ('{topic_uuid}', 'DF2B3FC0-0A65-416F-AFF9-073E53FFCAAC', N'{vocabulary_topic.topic_name}', N'{vocabulary_topic.topic_name}', 'pro1', {len(vocabulary_topic.vocabularies)}, '2024-06-07 16:22:07', {0}, {1});\n")
+        else:  # MySQL
+            sql_file.write(f"VALUES ('{topic_uuid}', 'df2b3fc0-0a65-416f-aff9-073e53ffcaac', '{vocabulary_topic.topic_name}', '{vocabulary_topic.topic_name}', 'pro1', {len(vocabulary_topic.vocabularies)}, '2024-06-07 16:22:07', {0}, {1});\n")
 
         for vocabulary in vocabulary_topic.vocabularies:
-            crawl_vocabulary_script.write(f"INSERT INTO Vocabularies (idList, topic, engWord, wordType, meaning, pronunciation, example, status)\n")
-            crawl_vocabulary_script.write(f"SELECT VocList.idVocList, N'{vocabulary.topic}', N'{vocabulary.engWord}', N'{vocabulary.wordType}', N'{vocabulary.meanings}', N'{vocabulary.pronunciation}', N'{vocabulary.example}', {0}\n")
-            crawl_vocabulary_script.write(f"FROM VocList\n")
-            crawl_vocabulary_script.write(f"WHERE VocList.title = N'{vocabulary_topic.topic_name}'\n")
-        crawl_vocabulary_script.write("COMMIT;\n\n\n")
+            vocab_uuid = generate_uuid()
+            sql_file.write(f"INSERT INTO Vocabularies (idVoc, idList, topic, engWord, wordType, meaning, pronunciation, example, status)\n")
+            if DB_TYPE == "sqlserver":
+                sql_file.write(f"VALUES ('{vocab_uuid}', '{topic_uuid}', N'{vocabulary.topic}', N'{vocabulary.engWord}', N'{vocabulary.wordType}', N'{vocabulary.meanings}', N'{vocabulary.pronunciation}', N'{vocabulary.example}', {0});\n")
+            else:  # MySQL
+                sql_file.write(f"VALUES ('{vocab_uuid}', '{topic_uuid}', '{vocabulary.topic}', '{vocabulary.engWord}', '{vocabulary.wordType}', '{vocabulary.meanings}', '{vocabulary.pronunciation}', '{vocabulary.example}', {0});\n")
+
+        sql_file.write("COMMIT;\n\n")
